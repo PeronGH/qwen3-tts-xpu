@@ -6,13 +6,17 @@ Supports all released 12Hz checkpoints (0.6B/1.7B CustomVoice, 1.7B VoiceDesign,
 
 ## Install
 
-Arch Linux packages:
+Install an XPU build of PyTorch first (e.g. `pip install torch --index-url https://download.pytorch.org/whl/xpu`), then:
+
+```
+pip install -r requirements.txt
+```
+
+On Arch Linux the same dependencies are available as system packages:
 
 ```
 pacman -S python-pytorch-opt-xpu python-safetensors python-tokenizers python-soundfile python-soxr python-huggingface-hub
 ```
-
-or `pip install -r requirements.txt` with an XPU build of PyTorch.
 
 ## Usage
 
@@ -36,5 +40,7 @@ for chunk in tts.stream(prompt):  # or stream audio chunks
 
 ## Tools
 
-- `scripts/bench.py MODEL [--random-weights]`: generation and decode speed; `--random-weights` only needs the config/tokenizer files.
-- `scripts/parity.py`: compares tokens, prompt embeddings, logits, greedy codes and decoded audio against upstream (see its docstring for the venv setup).
+Run from the repository root:
+
+- `python -m scripts.bench MODEL [--random-weights]`: generation and decode speed; `--random-weights` only needs the config and tokenizer files.
+- `python -m scripts.parity --upstream PATH/TO/Qwen3-TTS MODEL`: compares tokens, prompt embeddings, logits, greedy codes and decoded audio against upstream (see the script's docstring for its dependencies).

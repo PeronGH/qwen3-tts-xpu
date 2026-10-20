@@ -1,12 +1,13 @@
-r"""Compare this implementation against upstream Qwen3-TTS (needs real weights).
+"""Compare this implementation against upstream Qwen3-TTS on the same device and weights.
 
-Upstream needs transformers 4.57.3, which conflicts with the system packages, so run this in a
-throwaway venv that reuses the system torch:
+Needs a checkout of https://github.com/QwenLM/Qwen3-TTS and an environment with an XPU build of
+PyTorch plus upstream's pinned dependencies (keep it separate from the main environment):
 
-    python -m venv --system-site-packages /tmp/q3ref
-    /tmp/q3ref/bin/pip install transformers==4.57.3 accelerate==1.12.0 librosa einops
-    /tmp/q3ref/bin/python scripts/parity.py --upstream ../Qwen3-TTS MODEL_DIR \
-        [--ref-audio a.wav --ref-text "..."]   # ref audio is required for Base models
+    pip install transformers==4.57.3 accelerate==1.12.0 librosa einops
+
+Then, from this repository's root (Base models also need --ref-audio and --ref-text):
+
+    python -m scripts.parity --upstream PATH/TO/Qwen3-TTS MODEL
 
 Checks: text token ids, prefill embeddings, talker prefill logits, greedy codes, codec decode
 and, for Base models, reference codes and speaker embedding. bf16 kernels differ slightly
@@ -17,14 +18,11 @@ import argparse
 import contextlib
 import sys
 import types
-from pathlib import Path
 
 import numpy as np
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-TEXT = "Hello world. This is a quick test of the speech synthesis system on an Intel GPU."
+TEXT = "Hello world. This is a quick test of the speech synthesis system."
 
 
 def stub_25hz_deps() -> None:

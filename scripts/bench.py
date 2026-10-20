@@ -1,21 +1,20 @@
-"""Benchmark generation speed.
+"""Benchmark generation and decode speed. Run from the repository root:
 
-    python scripts/bench.py Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice --frames 250
-    python scripts/bench.py /path/with/configs --random-weights   # no weights needed
+    python -m scripts.bench Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice --frames 250
 
-`--random-weights` only needs config.json, generation_config.json, tokenizer files and
-speech_tokenizer/config.json, so speed can be measured without downloading checkpoints.
+`--random-weights` measures speed without the checkpoints; it only needs the config and
+tokenizer files, e.g.:
+
+    hf download Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice --exclude "*.safetensors" --local-dir cfg
+    python -m scripts.bench cfg --random-weights
 """
 
 import argparse
-import sys
 import time
 from pathlib import Path
 
 import numpy as np
 import torch
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from qwen3_tts_xpu import Qwen3TTS, VoiceClonePrompt
 from qwen3_tts_xpu.codec import SpeechTokenizer
