@@ -4,7 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from safetensors import safe_open
 from torch import nn
 
 from .audio import AudioInput, load_audio, resample
@@ -20,6 +19,7 @@ from .generator import Generator
 from .speaker import mel_spectrogram
 from .talker import Qwen3TTSModel
 from .text import TextTokenizer
+from .weights import load_safetensors
 
 
 @dataclass
@@ -72,14 +72,10 @@ def resolve_model_dir(name_or_path: str | Path) -> Path:
 
 def _load_weights(module_factory, files: list[Path], device, dtype) -> nn.Module:
     with torch.device("meta"):
-        module = module_factory()
-    state = {}
-    for f in files:
-        with safe_open(str(f), framework="pt") as fh:
-            for k in fh.keys():  # noqa: SIM118
-                state[k] = fh.get_tensor(k)
-    module.load_state_dict(state, strict=True, assign=True)
-    return module.to(device=device, dtype=dtype).eval()
+        module = module_factory().to(dtype)
+    module = module.to_empty(device=device)
+    load_safetensors(module, files)
+    return module.eval()
 
 
 class Qwen3TTS:
