@@ -1,0 +1,8 @@
+# Arch: python-pytorch-opt-xpu python-safetensors python-tokenizers python-soundfile python-soxr python-huggingface-hub
+torch>=2.14
+safetensors
+tokenizers
+soundfile
+soxr
+huggingface-hub
+numpy
