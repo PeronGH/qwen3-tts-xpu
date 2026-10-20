@@ -30,11 +30,16 @@ _DTYPES = {
 _ALIGN = 4096
 
 
+def _fadvise(fd: int, offset: int, length: int, advice: str) -> None:
+    if hasattr(os, "posix_fadvise"):  # no-op where unavailable (e.g. macOS)
+        os.posix_fadvise(fd, offset, length, getattr(os, advice))
+
+
 class _Reader:
     def __init__(self, path: Path):
         self.path = path
         try:
-            self.fd = os.open(path, os.O_RDONLY | os.O_DIRECT)
+            self.fd = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECT", 0))
             self.direct = True
         except OSError:
             self._open_buffered()
@@ -43,7 +48,7 @@ class _Reader:
         self.fd = os.open(self.path, os.O_RDONLY)
         self.direct = False
         # No readahead: it would cache pages beyond each chunk that DONTNEED never sees.
-        os.posix_fadvise(self.fd, 0, 0, os.POSIX_FADV_RANDOM)
+        _fadvise(self.fd, 0, 0, "POSIX_FADV_RANDOM")
 
     def read(self, buf: mmap.mmap, pos: int) -> int:
         """Fill `buf` from the page-aligned file offset `pos`; returns bytes read."""
@@ -56,21 +61,21 @@ class _Reader:
             self._open_buffered()
             n = os.preadv(self.fd, [buf], pos)
         if not self.direct:
-            os.posix_fadvise(self.fd, pos, n, os.POSIX_FADV_DONTNEED)
+            _fadvise(self.fd, pos, n, "POSIX_FADV_DONTNEED")
         return n
 
     def close(self) -> None:
         if not self.direct:
-            os.posix_fadvise(self.fd, 0, 0, os.POSIX_FADV_DONTNEED)
+            _fadvise(self.fd, 0, 0, "POSIX_FADV_DONTNEED")
         os.close(self.fd)
 
 
 def _header(path: Path) -> tuple[int, dict]:
     with open(path, "rb", buffering=0) as f:
-        os.posix_fadvise(f.fileno(), 0, 0, os.POSIX_FADV_RANDOM)
+        _fadvise(f.fileno(), 0, 0, "POSIX_FADV_RANDOM")
         (n,) = struct.unpack("<Q", f.read(8))
         header = json.loads(f.read(n))
-        os.posix_fadvise(f.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
+        _fadvise(f.fileno(), 0, 0, "POSIX_FADV_DONTNEED")
     header.pop("__metadata__", None)
     return 8 + n, header
 

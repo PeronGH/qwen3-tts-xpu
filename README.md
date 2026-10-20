@@ -4,6 +4,8 @@ A standalone, plain-PyTorch inference engine for the [Qwen3-TTS](https://github.
 
 Supports all released 12Hz checkpoints (0.6B/1.7B CustomVoice, 1.7B VoiceDesign, 0.6B/1.7B Base voice cloning), batch size 1.
 
+Other PyTorch devices (`--device cuda`, `mps`, `cpu`) are best effort: they run the same code without graph replay and are untested.
+
 ## Install
 
 Install an XPU build of PyTorch first (e.g. `pip install torch --index-url https://download.pytorch.org/whl/xpu`), then:
