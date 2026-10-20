@@ -25,12 +25,28 @@ pacman -S python-pytorch-opt-xpu python-safetensors python-tokenizers python-sou
 ```
 python tts.py -m Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice --speaker ryan "Hello there." -o out.wav
 python tts.py -m Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign --instruct "A calm, low voice." "Hi."
-python tts.py -m Qwen/Qwen3-TTS-12Hz-0.6B-Base --ref-audio ref.wav --ref-text "Transcript." "Hi."
 ```
 
 `-m` takes a Hugging Face repo id (downloaded on first use) or a local directory; `--stream` decodes audio in chunks while generating.
 
-Base models can save a cloned voice with `--save-voice voice.pt` and reuse it with `--voice voice.pt`. The file format is the same as the official web demo's "Save / Load Voice", so files work in both directions; a voice only fits models of the same size (0.6B or 1.7B).
+### Voice cloning
+
+Voice cloning uses the Base models. Give a reference recording and its transcript; without `--ref-text` only the speaker embedding is used, which is easier but less faithful.
+
+```
+python tts.py -m Qwen/Qwen3-TTS-12Hz-0.6B-Base --ref-audio ref.wav --ref-text "Transcript." "Hi."
+```
+
+To reuse a voice without re-encoding the reference, save it once (text is optional here) and load it later:
+
+```
+python tts.py -m Qwen/Qwen3-TTS-12Hz-0.6B-Base --ref-audio ref.wav --ref-text "Transcript." --save-voice voice.pt
+python tts.py -m Qwen/Qwen3-TTS-12Hz-0.6B-Base --voice voice.pt "Hi."
+```
+
+Voice files use the same format as the official web demo's "Save / Load Voice", so they work in both directions. A voice only fits models of the same size (0.6B or 1.7B).
+
+### Python
 
 ```python
 from qwen3_tts_xpu import Qwen3TTS
@@ -40,6 +56,14 @@ prompt = tts.custom_voice_prompt("Hello there.", speaker="ryan")
 wav = tts.synthesize(prompt)  # float32 numpy array at tts.sample_rate
 for chunk in tts.stream(prompt):  # or stream audio chunks
     ...
+
+# Voice cloning (Base models)
+from qwen3_tts_xpu import VoiceClonePrompt
+
+base = Qwen3TTS.from_pretrained("Qwen/Qwen3-TTS-12Hz-0.6B-Base")
+voice = base.create_voice_clone_prompt("ref.wav", ref_text="Transcript.")
+voice.save("voice.pt")
+wav = base.synthesize(base.voice_clone_prompt("Hi.", VoiceClonePrompt.load("voice.pt")))
 ```
 
 ## Tools
