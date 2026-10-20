@@ -28,6 +28,31 @@ class VoiceClonePrompt:
     spk_embedding: torch.Tensor  # [D]
     ref_text: str | None = None
 
+    def save(self, path: str | Path) -> None:
+        """Write the voice file format of upstream's web demo ("Save / Load Voice")."""
+        item = {
+            "ref_code": None if self.ref_code is None else self.ref_code.cpu(),
+            "ref_spk_embedding": self.spk_embedding.cpu(),
+            "x_vector_only_mode": self.ref_code is None,
+            "icl_mode": self.ref_code is not None,
+            "ref_text": self.ref_text,
+        }
+        torch.save({"items": [item]}, path)
+
+    @classmethod
+    def load(cls, path: str | Path, index: int = 0) -> VoiceClonePrompt:
+        """Read a voice file saved by `save` or by upstream's web demo."""
+        item = torch.load(path, map_location="cpu", weights_only=True)["items"][index]
+        icl = bool(item.get("icl_mode", not item.get("x_vector_only_mode", False)))
+        ref_code = item.get("ref_code") if icl else None
+        if ref_code is not None and not item.get("ref_text"):
+            raise ValueError(f"{path}: ICL voice file without ref_text")
+        return cls(
+            ref_code=None if ref_code is None else torch.as_tensor(ref_code, dtype=torch.long),
+            spk_embedding=torch.as_tensor(item["ref_spk_embedding"]),
+            ref_text=item.get("ref_text"),
+        )
+
 
 @dataclass
 class Prompt:
@@ -293,6 +318,11 @@ class Qwen3TTS:
     ) -> Prompt:
         if self.cfg.model_type != "base":
             raise ValueError(f"{self.cfg.model_type} model does not support voice cloning")
+        if clone.spk_embedding.numel() != self.cfg.talker.hidden_size:
+            raise ValueError(
+                f"speaker embedding has {clone.spk_embedding.numel()} values but this model "
+                f"expects {self.cfg.talker.hidden_size}; the voice was made with another model size"
+            )
         return self._build(text, language, clone=clone, non_streaming_mode=non_streaming_mode)
 
     @torch.inference_mode()

@@ -28,6 +28,8 @@ python tts.py -m Qwen/Qwen3-TTS-12Hz-0.6B-Base --ref-audio ref.wav --ref-text "T
 
 `-m` takes a Hugging Face repo id (downloaded on first use) or a local directory; `--stream` decodes audio in chunks while generating.
 
+Base models can save a cloned voice with `--save-voice voice.pt` and reuse it with `--voice voice.pt`. The file format is the same as the official web demo's "Save / Load Voice", so files work in both directions; a voice only fits models of the same size (0.6B or 1.7B).
+
 ```python
 from qwen3_tts_xpu import Qwen3TTS
 
